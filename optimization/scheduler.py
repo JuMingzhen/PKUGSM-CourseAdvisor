@@ -88,10 +88,11 @@ class CourseScheduler:
                 if prereq in courses_name:  # 如果先修课程在可选课程中
                     # 确保先修课程在被修课程之前完成
                     for semester in semesters:
-                        # 对于每个学期，如果选择了当前课程，那么先修课程必须在之前的学期完成
-                        self.model.addConstr(
-                            gp.quicksum(x[courses_name[prereq].id, s] for s in range(1, semester)) >= x[course, semester]
-                        )
+                        if semester > 1:
+                            # 对于每个学期，如果选择了当前课程，那么先修课程必须在之前的学期完成
+                            self.model.addConstr(
+                                gp.quicksum(x[courses_name[prereq].id, s] for s in range(semesters[0], semester)) >= x[course, semester]
+                            )
         
         # 6. 毕业要求约束
         # 6.1 必修课程约束
