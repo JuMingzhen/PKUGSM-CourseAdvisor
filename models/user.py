@@ -5,11 +5,13 @@ from typing import List, Optional
 class UserRequirements:
     """用户选课需求模型"""
     current_grade: int  # 当前年级（1-4）
-    current_semester: int  # 当前学期（1-8）
+    current_semester: int  # 当前学期（1-2）
     completed_courses: List[str]  # 已修课程列表
     study_abroad: bool  # 是否出国留学
     internship: bool  # 是否实习
+    English_level: str #等级有B,C,C+
     target_semester: Optional[int] = None  # 目标学期（可选）
+    
     
     def get_remaining_semesters(self) -> int:
         """计算剩余需要推荐的学期数"""

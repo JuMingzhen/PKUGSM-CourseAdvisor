@@ -29,7 +29,7 @@ class CourseScheduler:
         
         # 创建决策变量
         # x[i,j] = 1 表示课程i在第j学期选修
-        courses = {course.name: course for course in available_courses}
+        courses = {course.id: course for course in available_courses}
         semesters = range(
             (self.user_requirements.current_grade - 1) * 2 + self.user_requirements.current_semester + 1,
             9
@@ -66,7 +66,16 @@ class CourseScheduler:
                         self.model.addConstr(
                             x[course1, semester] + x[course2, semester] <= 1
                         )
-        
+        # 4. 开课学期限制
+        for course in courses.values():
+            if len(course.semester) > 1:
+                continue
+            for semester in semesters:
+                t = course.semester[0]
+                if semester % 2 != t % 2:
+                    self.model.addConstr(
+                        x[course.id, semester] == 0
+                    )
         # 设置目标函数（这里使用总学分作为目标，你可以根据需要修改）
         self.model.setObjective(
             gp.quicksum(
@@ -81,9 +90,7 @@ class CourseScheduler:
         """求解优化问题"""
         if self.model is None:
             self.create_model()
-        
         self.model.optimize()
-        
         if self.model.status == gp.GRB.OPTIMAL:
             # 构建结果
             schedules = {}
@@ -92,8 +99,12 @@ class CourseScheduler:
                 9
             ):
                 semester_courses = []
-                for course_name, course in self.data_loader.courses.items():
-                    if self.model.getVarByName(f"x[{course_name},{semester}]").x > 0.5:
+                for course in self.data_loader.courses.values():
+                    try:
+                        temp = self.model.getVarByName(f"x[{course.id},{semester}]").x
+                    except:
+                        continue
+                    if temp > 0.5:
                         semester_courses.append(course)
                 schedules[semester] = SemesterSchedule(semester, semester_courses)
             
