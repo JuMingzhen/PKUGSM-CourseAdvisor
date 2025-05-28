@@ -3,6 +3,7 @@ from models.user import UserRequirements
 from utils.data_loader import CourseDataLoader
 from utils.constraints import CourseConstraints
 from optimization.scheduler import CourseScheduler
+import traceback
 
 def main():
     # 加载课程数据
@@ -12,15 +13,24 @@ def main():
     print("欢迎使用光华管理学院金融系选课推荐系统！")
     print("请输入您的信息：")
     
-    current_grade = int(input("当前年级（1-4）："))
-    current_semester = int(input("当前学期（1-2）："))
-    completed_courses = input("已修课程（用逗号分隔）：").split(',')
+    is_freshman = input("是否为新生（是/否）：").lower() == '是'
+    
+    if not is_freshman:
+        current_grade = int(input("当前年级（1-4）："))
+        current_semester = int(input("当前学期（1-2）："))
+        completed_courses = input("已修课程（用逗号分隔）：").split(',')
+    else:
+        current_grade = None
+        current_semester = None
+        completed_courses = []
+    
     study_abroad = input("是否计划出国留学（是/否）：").lower() == '是'
     internship = input("是否计划实习（是/否）：").lower() == '是'
     English_level = input("英语水平（B/C/C+）：")
     
     # 创建用户需求对象
     user_requirements = UserRequirements(
+        is_freshman=is_freshman,
         current_grade=current_grade,
         current_semester=current_semester,
         completed_courses=completed_courses,
@@ -57,6 +67,8 @@ def main():
         
     except Exception as e:
         print(f"求解过程中出现错误：{str(e)}")
+        error_info = traceback.format_exc()
+        print(f"完整错误信息:\n{error_info}")
 
 if __name__ == "__main__":
     main()

@@ -31,8 +31,8 @@ class CourseDataLoader:
         return [course for course in self.courses.values() 
                 if course.name not in completed_courses]
     
-    def get_courses_by_prerequisites(self, completed_courses: List[str]) -> List[Course]:
-        """获取满足先修课程要求的课程"""
-        available_courses = self.get_available_courses(completed_courses)
-        return [course for course in available_courses 
-                if all(prereq in completed_courses for prereq in course.prerequisites)] 
+    # def get_courses_by_prerequisites(self, completed_courses: List[str]) -> List[Course]:
+    #     """获取满足先修课程要求的课程"""
+    #     available_courses = self.get_available_courses(completed_courses)
+    #     return [course for course in available_courses 
+    #             if all(prereq in completed_courses for prereq in course.prerequisites)] 
