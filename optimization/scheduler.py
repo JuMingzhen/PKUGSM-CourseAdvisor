@@ -97,13 +97,16 @@ class CourseScheduler:
         # 6. 毕业要求约束
         # 6.1 必修课程约束
         for required_course in GraduationRequirements.REQUIRED_COURSES:
+            if required_course not in courses_name:
+                continue
             temp_id = courses_name[required_course].id
-            if temp_id in courses.keys():
-                self.model.addConstr(
-                    gp.quicksum(x[temp_id, semester] for semester in semesters) == 1
-                )
+            self.model.addConstr(
+                gp.quicksum(x[temp_id, semester] for semester in semesters) == 1
+            )
         
         # 6.2 金融选修课程约束（至少12学分）
+        already_selected_credits = sum([course.credits for course in self.user_requirements.completed_courses 
+                                        if course in GraduationRequirements.FINANCE_ELECTIVE_COURSES])
         finance_elective_courses = [course for course in courses.keys() 
                                  if courses[course].name in GraduationRequirements.FINANCE_ELECTIVE_COURSES]
         self.model.addConstr(
@@ -111,10 +114,12 @@ class CourseScheduler:
                 courses[course].credits * x[course, semester]
                 for course in finance_elective_courses
                 for semester in semesters
-            ) >= GraduationRequirements.FINANCE_ELECTIVE_CREDITS_REQUIRED
+            ) >= GraduationRequirements.FINANCE_ELECTIVE_CREDITS_REQUIRED  - already_selected_credits
         )
         
         # 6.3 中国相关课程约束（至少4学分）
+        already_selected_credits = sum([course.credits for course in self.user_requirements.completed_courses 
+                                        if course in GraduationRequirements.CHINA_RELATED_COURSES])
         china_related_courses = [course for course in courses.keys()
                                if courses[course].name in GraduationRequirements.CHINA_RELATED_COURSES]
         self.model.addConstr(
@@ -122,10 +127,12 @@ class CourseScheduler:
                 courses[course].credits * x[course, semester]
                 for course in china_related_courses
                 for semester in semesters
-            ) >= GraduationRequirements.CHINA_RELATED_CREDITS_REQUIRED
+            ) >= GraduationRequirements.CHINA_RELATED_CREDITS_REQUIRED - already_selected_credits
         )
         
         # 6.4 其他选修课程约束（至少8学分）
+        already_selected_credits = sum([course.credits for course in self.user_requirements.completed_courses 
+                                        if course in GraduationRequirements.OTHER_ELECTIVE_COURSES])
         other_elective_courses = [course for course in courses.keys()
                                 if courses[course].name in GraduationRequirements.OTHER_ELECTIVE_COURSES]
         self.model.addConstr(
@@ -133,7 +140,7 @@ class CourseScheduler:
                 courses[course].credits * x[course, semester]
                 for course in other_elective_courses
                 for semester in semesters
-            ) >= GraduationRequirements.OTHER_ELECTIVE_CREDITS_REQUIRED
+            ) >= GraduationRequirements.OTHER_ELECTIVE_CREDITS_REQUIRED - already_selected_credits
         )
         
         # 设置目标函数（这里使用总学分作为目标，你可以根据需要修改）

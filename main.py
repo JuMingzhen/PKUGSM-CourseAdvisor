@@ -26,7 +26,6 @@ def main():
     
     study_abroad = input("是否计划出国留学（是/否）：").lower() == '是'
     internship = input("是否计划实习（是/否）：").lower() == '是'
-    English_level = input("英语水平（B/C/C+）：")
     
     # 创建用户需求对象
     user_requirements = UserRequirements(
