@@ -59,9 +59,17 @@ class CourseScheduler:
                 gp.quicksum(
                     courses[course].credits * x[course, semester]
                     for course in courses
-                ) <= 25
+                ) <= 20
             )
-        
+        #前6个学期每学期至少修9学分
+        if semesters[0] <= 6:
+            for semester in range(semesters[0], 7):
+                self.model.addConstr(
+                    gp.quicksum(
+                        courses[course].credits * x[course, semester]
+                        for course in courses
+                    ) >= 9
+                )
         # 3. 时间冲突约束
         for semester in semesters:
             for course1 in courses:
@@ -142,16 +150,39 @@ class CourseScheduler:
                 for semester in semesters
             ) >= GraduationRequirements.OTHER_ELECTIVE_CREDITS_REQUIRED - already_selected_credits
         )
+
+        # 7. 不出国时的必修课程约束（前三年完成）
+        #当然如果你已经注定无法保研，那本系统也无能为力了，祝好！
+        if not self.user_requirements.study_abroad:
+            if semesters[0] <= 6:
+                required_courses = [course for course in courses.values() 
+                              if course.name in GraduationRequirements.REQUIRED_COURSES]
+                for course in required_courses:
+                    # 确保必修课程在前6个学期完成
+                    self.model.addConstr(
+                        gp.quicksum(x[course.id, semester] for semester in range(semesters[0], 7)) == 1
+                    )
         
-        # 设置目标函数（这里使用总学分作为目标，你可以根据需要修改）
-        self.model.setObjective(
-            gp.quicksum(
-                courses[course].credits * x[course, semester]
-                for course in courses
-                for semester in semesters
-            ),
-            sense=gp.GRB.MAXIMIZE
+        # 设置目标函数
+        # 1. 最大化总学分
+        total_credits = gp.quicksum(
+            courses[course].credits * x[course, semester]
+            for course in courses
+            for semester in semesters
         )
+        
+        # 2. 如果选择实习，最小化实习学期的课程数量
+        if self.user_requirements.internship and self.user_requirements.internship_semester is not None:
+            internship_semester = self.user_requirements.internship_semester
+            internship_course_count = gp.quicksum(
+                x[course, internship_semester]
+                for course in courses
+            )
+            # 设置多目标优化
+            self.model.setObjectiveN(total_credits, 0, 1)  # 主要目标：最大化总学分
+            self.model.setObjectiveN(-internship_course_count, 1, 0.5)  # 次要目标：最小化实习学期课程数
+        else:
+            self.model.setObjective(total_credits, sense=gp.GRB.MAXIMIZE)
     
     def solve(self) -> CompleteSchedule:
         """求解优化问题"""

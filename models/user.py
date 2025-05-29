@@ -3,15 +3,14 @@ from typing import List, Optional
 
 @dataclass
 class UserRequirements:
-    """用户选课需求模型"""
+    """用户需求模型"""
     is_freshman: bool  # 是否为新生
-    current_grade: Optional[int] = None  # 当前年级（1-4），新生可为None
-    current_semester: Optional[int] = None  # 当前学期（1-2），新生可为None
-    completed_courses: List[str] = None  # 已修课程列表
-    study_abroad: bool = False  # 是否出国留学
-    internship: bool = False  # 是否实习
-    target_semester: Optional[int] = None  # 目标学期（可选）
-    English_level: str = "C"  # 英语水平（B/C/C+）
+    current_grade: Optional[int]  # 当前年级（1-4）
+    current_semester: Optional[int]  # 当前学期（1-2）
+    completed_courses: List[str]  # 已修课程列表
+    study_abroad: bool  # 是否计划出国留学
+    internship: bool  # 是否计划实习
+    internship_semester: Optional[int] = None  # 实习学期（1-8）
     
     def __post_init__(self):
         if self.completed_courses is None:
@@ -29,14 +28,13 @@ class UserRequirements:
         return total_semesters - current_semester_index
     
     def validate(self) -> bool:
-        """验证用户输入的有效性"""
+        """验证用户输入是否有效"""
         if not self.is_freshman:
             if not (1 <= self.current_grade <= 4):
                 return False
             if not (1 <= self.current_semester <= 2):
                 return False
-        if self.target_semester is not None and not (1 <= self.target_semester <= 8):
-            return False
-        if self.English_level not in ["B", "C", "C+"]:
-            return False
+        if self.internship and self.internship_semester is not None:
+            if not (1 <= self.internship_semester <= 8):
+                return False
         return True 

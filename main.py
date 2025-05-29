@@ -27,6 +27,10 @@ def main():
     study_abroad = input("是否计划出国留学（是/否）：").lower() == '是'
     internship = input("是否计划实习（是/否）：").lower() == '是'
     
+    internship_semester = None
+    if internship:
+        internship_semester = int(input("计划在哪个学期实习（1-8）："))
+    
     # 创建用户需求对象
     user_requirements = UserRequirements(
         is_freshman=is_freshman,
@@ -35,7 +39,7 @@ def main():
         completed_courses=completed_courses,
         study_abroad=study_abroad,
         internship=internship,
-        English_level=English_level
+        internship_semester=internship_semester
     )
     
     # 验证用户输入
@@ -63,6 +67,10 @@ def main():
                 print(f"- {course.name} ({course.credits}学分)")
         
         print(f"\n总学分：{schedule.get_total_credits()}")
+        
+        # 如果不出国，显示提示信息
+        if not study_abroad:
+            print("\n注意：由于您选择不出国，系统已在前三年（前6个学期）安排必修课程、政治课和体育课。")
         
     except Exception as e:
         print(f"求解过程中出现错误：{str(e)}")
