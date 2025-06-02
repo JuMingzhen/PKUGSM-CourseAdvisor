@@ -28,8 +28,10 @@ class CourseDataLoader:
     
     def get_available_courses(self, completed_courses: List[str]) -> List[Course]:
         """获取可选的课程（排除已修课程）"""
+        # 标准化已修课程名称（移除所有空格）
+        normalized_completed = {course.replace(' ', '') for course in completed_courses}
         return [course for course in self.courses.values() 
-                if course.name not in completed_courses]
+                if course.name.replace(' ', '') not in normalized_completed]
     
     # def get_courses_by_prerequisites(self, completed_courses: List[str]) -> List[Course]:
     #     """获取满足先修课程要求的课程"""

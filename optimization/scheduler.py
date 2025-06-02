@@ -21,16 +21,22 @@ class CourseScheduler:
     
     def create_model(self):
         """创建优化模型"""
+        print("开始创建优化模型...")  # 调试信息
+        print("用户需求:", self.user_requirements)  # 调试信息
+        
         self.model = gp.Model("Course_Scheduling")
         
         # 获取可用课程
         available_courses = self.data_loader.get_available_courses(
             self.user_requirements.completed_courses
         )
+        print("可用课程数量:", len(available_courses))  # 调试信息
+        print("已修课程:", self.user_requirements.completed_courses)  # 调试信息
+        
         # 创建决策变量
-        # x[i,j] = 1 表示课程i在第j学期选修
         courses = {course.id: course for course in available_courses}
         courses_name = {course.name: course for course in available_courses}
+        
         if self.user_requirements.is_freshman:
             semesters = range(1, 9)
         else:
@@ -38,6 +44,7 @@ class CourseScheduler:
                 (self.user_requirements.current_grade - 1) * 2 + self.user_requirements.current_semester + 1,
                 9
             )
+        print("规划学期范围:", list(semesters))  # 调试信息
         
         x = self.model.addVars(
             courses.keys(),
@@ -59,9 +66,10 @@ class CourseScheduler:
                 gp.quicksum(
                     courses[course].credits * x[course, semester]
                     for course in courses
-                ) <= 20
+                ) <= self.user_requirements.upperbound_credits
             )
-        #前6个学期每学期至少修9学分
+        
+        # 前6个学期每学期至少修9学分，大四最多修12学分
         if semesters[0] <= 6:
             for semester in range(semesters[0], 7):
                 self.model.addConstr(
@@ -70,6 +78,23 @@ class CourseScheduler:
                         for course in courses
                     ) >= 9
                 )
+        if semesters[0] >= 7:
+            for semester in range(semesters[0], 9):
+                self.model.addConstr(
+                    gp.quicksum(
+                        courses[course].credits * x[course, semester]
+                        for course in courses
+                    ) <= 12
+                )
+        else:
+            for semester in range(7, 9):
+                self.model.addConstr(
+                    gp.quicksum(
+                        courses[course].credits * x[course, semester]
+                        for course in courses
+                    ) <= 12
+                )
+        
         # 3. 时间冲突约束
         for semester in semesters:
             for course1 in courses:
@@ -89,13 +114,16 @@ class CourseScheduler:
                     self.model.addConstr(
                         x[course.id, semester] == 0
                     )
-
+        
         # 5. 先修课程约束
         for course in courses:
             for prereq in courses[course].prerequisites:
                 if prereq in courses_name:  # 如果先修课程在可选课程中
                     # 确保先修课程在被修课程之前完成
                     for semester in semesters:
+                        if semester == 1:
+                            if courses[course].prerequisites != []:
+                                self.model.addConstr(x[course, semester] == 0)
                         if semester > 1:
                             # 对于每个学期，如果选择了当前课程，那么先修课程必须在之前的学期完成
                             self.model.addConstr(
@@ -150,9 +178,8 @@ class CourseScheduler:
                 for semester in semesters
             ) >= GraduationRequirements.OTHER_ELECTIVE_CREDITS_REQUIRED - already_selected_credits
         )
-
+        
         # 7. 不出国时的必修课程约束（前三年完成）
-        #当然如果你已经注定无法保研，那本系统也无能为力了，祝好！
         if not self.user_requirements.study_abroad:
             if semesters[0] <= 6:
                 required_courses = [course for course in courses.values() 
@@ -163,13 +190,74 @@ class CourseScheduler:
                         gp.quicksum(x[course.id, semester] for semester in range(semesters[0], 7)) == 1
                     )
         
+        # 8. 新生第一学期必须选择经济学和光华第一课和组织与管理
+        if self.user_requirements.is_freshman:
+            # 找到经济学和光华第一课的课程ID
+            economics_id = None
+            first_course_id = None
+            zuzhi_id = None
+            for course_id, course in courses.items():
+                if course.name == "经济学":
+                    economics_id = course_id
+                elif course.name == "光华第一课":
+                    first_course_id = course_id
+                elif course.name == "组织与管理":
+                    zuzhi_id = course_id
+            # 添加约束：这两门课必须在第一学期选择
+            if economics_id is not None:
+                self.model.addConstr(x[economics_id, 1] == 1)
+            if first_course_id is not None:
+                self.model.addConstr(x[first_course_id, 1] == 1)
+            if zuzhi_id is not None:
+                self.model.addConstr(x[zuzhi_id, 1] == 1)
+        
         # 设置目标函数
-        # 1. 最大化总学分
+        # 1. 根据规划类型设置主要目标
         total_credits = gp.quicksum(
             courses[course].credits * x[course, semester]
             for course in courses
             for semester in semesters
         )
+        
+        def has_overlap(list1, list2):
+            """判断两个列表是否存在交集"""
+            return bool(set(list1) & set(list2))
+        
+        print("规划类型:", self.user_requirements.planning_type)  # 调试信息
+        
+        if self.user_requirements.planning_type == "Minimal Effort":
+            # 最小化总学分
+            self.model.setObjectiveN(total_credits, 0, 1.0)  # 主要目标：最小化总学分
+        elif self.user_requirements.planning_type == "Balanced Workload":
+            # 最小化与目标学分的偏差
+            target = self.user_requirements.target_credits_per_semester
+            # 为每个学期创建正负偏差变量
+            pos_dev = self.model.addVars(semesters, name="pos_dev")
+            neg_dev = self.model.addVars(semesters, name="neg_dev")
+            
+            # 添加约束：实际学分 - 目标学分 = 正偏差 - 负偏差
+            for semester in semesters:
+                self.model.addConstr(
+                    gp.quicksum(courses[course].credits * x[course, semester] for course in courses) - target == pos_dev[semester] - neg_dev[semester]
+                )
+            
+            # 最小化总偏差
+            self.model.setObjectiveN(
+                gp.quicksum(pos_dev[semester] + neg_dev[semester] for semester in semesters),
+                0, 1.0
+            )  # 主要目标：最小化与目标学分的偏差
+        elif self.user_requirements.planning_type == "Focused Depth":
+            # 最大化偏好学科的课程学分
+            preferred_credits = gp.quicksum(
+                courses[course].credits * x[course, semester]
+                for course in courses
+                for semester in semesters
+                if has_overlap(courses[course].subject_category, self.user_requirements.preferred_subjects)
+            )
+            self.model.setObjectiveN(-preferred_credits, 0, 1.0)  # 主要目标：最大化偏好学科课程学分
+        else:  # Maximum Intensity
+            # 最大化总学分
+            self.model.setObjectiveN(-total_credits, 0, 1.0)  # 主要目标：最大化总学分
         
         # 2. 如果选择实习，最小化实习学期的课程数量
         if self.user_requirements.internship and self.user_requirements.internship_semester is not None:
@@ -179,10 +267,19 @@ class CourseScheduler:
                 for course in courses
             )
             # 设置多目标优化
-            self.model.setObjectiveN(total_credits, 0, 1)  # 主要目标：最大化总学分
-            self.model.setObjectiveN(-internship_course_count, 1, 0.5)  # 次要目标：最小化实习学期课程数
-        else:
-            self.model.setObjective(total_credits, sense=gp.GRB.MAXIMIZE)
+            self.model.setObjectiveN(internship_course_count, 1, 0.5)  # 次要目标：最小化实习学期课程数
+        
+        # 3. 如果有偏好学科，添加为次要目标
+        if self.user_requirements.preferred_subjects:
+            preferred_credits = gp.quicksum(
+                courses[course].credits * x[course, semester]
+                for course in courses
+                for semester in semesters
+                if has_overlap(courses[course].subject_category, self.user_requirements.preferred_subjects)
+            )
+            self.model.setObjectiveN(-preferred_credits, 2, 0.3)  # 第三目标：最大化偏好学科课程学分
+        
+        print("优化模型创建完成")  # 调试信息
     
     def solve(self) -> CompleteSchedule:
         """求解优化问题"""

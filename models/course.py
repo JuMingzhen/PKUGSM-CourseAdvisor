@@ -23,6 +23,7 @@ class Course:
     semester: List[int]  # 开课学期
     prerequisites: List[str]  # 先修课程
     description: str  # 课程介绍
+    subject_category: List[str]  # 课程所属学科子领域
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'Course':
@@ -39,7 +40,8 @@ class Course:
             semester=semester,
             times=times,
             prerequisites=prerequisites,
-            description=data['课程介绍']
+            description=data['课程介绍'],
+            subject_category=data['课程种类']
         )
     
     def has_time_conflict(self, other: 'Course') -> bool:
