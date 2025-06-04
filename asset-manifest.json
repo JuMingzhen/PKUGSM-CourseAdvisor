@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/PKUGSM-CourseAdvisor/static/css/main.9b013a07.css",
+    "main.js": "/PKUGSM-CourseAdvisor/static/js/main.921f93f0.js",
+    "static/js/453.8ab44547.chunk.js": "/PKUGSM-CourseAdvisor/static/js/453.8ab44547.chunk.js",
+    "index.html": "/PKUGSM-CourseAdvisor/index.html",
+    "main.9b013a07.css.map": "/PKUGSM-CourseAdvisor/static/css/main.9b013a07.css.map",
+    "main.921f93f0.js.map": "/PKUGSM-CourseAdvisor/static/js/main.921f93f0.js.map",
+    "453.8ab44547.chunk.js.map": "/PKUGSM-CourseAdvisor/static/js/453.8ab44547.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.9b013a07.css",
+    "static/js/main.921f93f0.js"
+  ]
+}
