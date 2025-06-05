@@ -124,9 +124,9 @@ $$\min \sum_{c \in C} \sum_{s \in S} credits_c \cdot x_{c,s}$$
 
 #### 3.2 均衡负载型（Balanced Workload）
 最小化与目标学分的偏差：
-$$\min \sum_{s \in S} (pos\_dev_s + neg\_dev_s)$$
+$$\min \sum_{s \in S} (posdev_s + negdev_s)$$
 其中：
-$$\sum_{c \in C} credits_c \cdot x_{c,s} - target = pos\_dev_s - neg\_dev_s, \forall s \in S$$
+$$\sum_{c \in C} credits_c \cdot x_{c,s} - target = posdev_s - negdev_s, \forall s \in S$$
 
 #### 3.3 专注深度型（Focused Depth）
 最大化偏好学科的课程学分：
