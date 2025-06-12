@@ -1,4 +1,5 @@
 # PKUGSM-CourseAdvisor 🎓
+北京大学光华管理学院“运筹优化与最优决策”课程作业
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![Gurobi](https://img.shields.io/badge/Optimization-Gurobi-FFD700)
